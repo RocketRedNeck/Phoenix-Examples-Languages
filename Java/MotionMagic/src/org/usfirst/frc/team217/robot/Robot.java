@@ -18,7 +18,7 @@
  */
 package org.usfirst.frc.team217.robot;
 
-import edu.wpi.first.wpilibj.IterativeRobot;
+import edu.wpi.first.wpilibj.IterativeRobot; 
 import edu.wpi.first.wpilibj.Joystick;
 
 import java.util.concurrent.TimeUnit;
@@ -35,11 +35,11 @@ public class Robot extends IterativeRobot {
 	Joystick _joy = new Joystick(0);
 	StringBuilder _sb = new StringBuilder();
 	
-	public static double elevatorMotorKf = 0.111544836;
-	public static double elevatorMotorKp = 0.1778688524;		
-	public static double elevatorMotorKi = 0.0015;
-	public static double elevatorMotorKd = 5.336065573;
-	public static int    elevatorMotorIZone = 300;	
+	public static double elevatorMotorKf = 0.03868035368; // 0.111544836;
+	public static double elevatorMotorKp = 0.9654738498; //0.005028509634 * 2 * 2 * 2 * 2 * 2 * 2 * 2 * 1.5 ; //0.1778688524;		
+	public static double elevatorMotorKi = 0.004;
+	public static double elevatorMotorKd = 9.654738498; //5.336065573;
+	public static int    elevatorMotorIZone = 50; //300;	
 	//Magic Motion Constants for the Elevator Subsystem
 	public final static boolean ELEVATOR_MOTOR_SENSOR_PHASE = false;
 
@@ -48,7 +48,7 @@ public class Robot extends IterativeRobot {
 
 	public final static FeedbackDevice ELEVATOR_MOTOR_FEEDBACK_DEVICE = FeedbackDevice.QuadEncoder;
 	public final static int ELEVATOR_MOTOR_NATIVE_TICKS_PER_REV = 8192;
-	public final static double ELEVATOR_MOTOR_FULL_THROTTLE_AVERAGE_SPEED_NATIVE_TICKS = 25588.4;	// per 100 ms, average of 10 samples
+	public final static double ELEVATOR_MOTOR_FULL_THROTTLE_AVERAGE_SPEED_NATIVE_TICKS = 26447.5; //9171.2;	// per 100 ms, average of 10 samples
 	
 	public final static int ELEVATOR_MOTOR_MOTION_CRUISE_SPEED_NATIVE_TICKS = (int)(0.80 * 
                                                                               ELEVATOR_MOTOR_FULL_THROTTLE_AVERAGE_SPEED_NATIVE_TICKS);
@@ -123,7 +123,7 @@ public class Robot extends IterativeRobot {
 
 		if (_joy.getRawButton(1)) {
 			/* Motion Magic - 8192 ticks/rev * 1 Rotations in either direction */
-			double targetPos = leftYstick * 8192 * 1.0;
+			double targetPos = leftYstick * 8192 * 10.0;
 			_talon.set(ControlMode.MotionMagic, targetPos);
 
 			/* append more signals to print when in speed mode. */
