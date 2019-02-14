@@ -68,7 +68,7 @@ import com.ctre.phoenix.motorcontrol.StatusFrameEnhanced;
 
 public class Robot extends TimedRobot {
 	/* Hardware */
-	TalonSRX _talon = new TalonSRX(3);
+	TalonSRX _talon = new TalonSRX(2);
 	Joystick _joy = new Joystick(0);
 
 	/* Used to build string throughout loop */
@@ -79,7 +79,7 @@ public class Robot extends TimedRobot {
 		_talon.configFactoryDefault();
 
 		/* Configure Sensor Source for Pirmary PID */
-		_talon.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative,
+		_talon.configSelectedFeedbackSensor(FeedbackDevice.QuadEncoder,
 											Constants.kPIDLoopIdx, 
 											Constants.kTimeoutMs);
 
@@ -88,7 +88,8 @@ public class Robot extends TimedRobot {
 		 * Invert Motor to have green LEDs when driving Talon Forward / Requesting Postiive Output
 		 * Phase sensor to have positive increment when driving Talon Forward (Green LED)
 		 */
-		_talon.setSensorPhase(true);
+		// JUNIOR !
+		_talon.setSensorPhase(false);
 		_talon.setInverted(false);
 
 		/* Set relevant frame periods to be at least as fast as periodic rate */
@@ -120,13 +121,24 @@ public class Robot extends TimedRobot {
 	 * This function is called periodically during operator control
 	 */
 	public void teleopPeriodic() {
+
+		if (_joy.getRawButton(3)) {
+			_talon.setSelectedSensorPosition(0);
+		}
 		/* Get gamepad axis - forward stick is positive */
 		double leftYstick = -1.0 * _joy.getY();
+		if ((Math.abs(leftYstick)<0.25) && !_joy.getRawButton(1) && !_joy.getRawButton(2))
+		{
+			_talon.set(ControlMode.PercentOutput,0.0);
+			return;
+		}
 
 		/* Get current Talon SRX motor output */
 		double motorOutput = _talon.getMotorOutputPercent();
 
 		/* Prepare line to print */
+		_sb.append("\tStick%:");
+		_sb.append(leftYstick);
 		_sb.append("\tOut%:");
 		_sb.append(motorOutput);
 		_sb.append("\tVel:");
@@ -136,11 +148,11 @@ public class Robot extends TimedRobot {
 		 * Peform Motion Magic when Button 1 is held,
 		 * else run Percent Output, which can be used to confirm hardware setup.
 		 */
-		if (_joy.getRawButton(1)) {
+		if (_joy.getRawButton(1) || _joy.getRawButton(2)) {
 			/* Motion Magic */ 
 			
-			/*4096 ticks/rev * 10 Rotations in either direction */
-			double targetPos = leftYstick * 4096 * 10.0;
+			/*8192 ticks/rev * 10 Rotations in either direction */
+			double targetPos = /*leftYstick **/ 8192 * 10.0 * (_joy.getRawButton(2)?-1.0:1.0);
 			_talon.set(ControlMode.MotionMagic, targetPos);
 
 			/* Append more signals to print when in speed mode */

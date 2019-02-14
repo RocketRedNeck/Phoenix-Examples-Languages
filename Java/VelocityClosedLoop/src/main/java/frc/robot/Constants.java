@@ -4,6 +4,8 @@
 package frc.robot;
 
 class Constants {
+
+	public static final int kTicksPerRev = 8192;
 	/**
 	 * Which PID slot to pull gains from. Starting 2018, you can choose from
 	 * 0,1,2 or 3. Only the first two (0,1) are visible in web-based
@@ -27,6 +29,11 @@ class Constants {
 	 * PID Gains may have to be adjusted based on the responsiveness of control loop.
      * kF: 1023 represents output value to Talon at 100%, 7200 represents Velocity units at 100% output
      * 
-	 * 	                                    			  kP   kI   kD   kF          Iz    PeakOut */
-    public final static Gains kGains_Velocit = new Gains( 0.25, 0.001, 20, 1023.0/7200.0,  300,  1.00);
+	 * 	                                    			 */
+	public final static Gains kGains_Velocit = new Gains( 0.14014/2, 		//P
+														  0.001, 		//I
+														  10.0*0.14014/2, 			//D
+														  1023.0/20000.0,//F
+														  400,  		//Iz
+														  1.00);		// peak output
 }

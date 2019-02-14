@@ -49,6 +49,7 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.Joystick;
 
 import com.ctre.phoenix.motorcontrol.can.*;
@@ -57,6 +58,8 @@ import com.ctre.phoenix.motorcontrol.*;
 public class Robot extends TimedRobot {
     /* Hardware */
 	TalonSRX _talon = new TalonSRX(1);
+	TalonSRX _talon1 = new TalonSRX(2);
+	TalonSRX _talon2 = new TalonSRX(3);
     Joystick _joy = new Joystick(0);
     
     /* String for output */
@@ -66,19 +69,33 @@ public class Robot extends TimedRobot {
 	int _loops = 0;
 
 	public void robotInit() {
+		SmartDashboard.putNumber("Target RPM",500.0);
+		_talon1.follow(_talon);
+		_talon2.follow(_talon);
+		
         /* Factory Default all hardware to prevent unexpected behaviour */
-        _talon.configFactoryDefault();
+		_talon.configFactoryDefault();
+		_talon1.configFactoryDefault();
+		_talon2.configFactoryDefault();
+
 
 		/* Config sensor used for Primary PID [Velocity] */
-        _talon.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative,
+        _talon.configSelectedFeedbackSensor(FeedbackDevice.QuadEncoder,
                                             Constants.kPIDLoopIdx, 
                                             Constants.kTimeoutMs);
 
-        /**
-		 * Phase sensor accordingly. 
-         * Positive Sensor Reading should match Green (blinking) Leds on Talon
-         */
-		_talon.setSensorPhase(true);
+		/**
+		 * Configure Talon SRX Output and Sesnor direction accordingly
+		 * Invert Motor to have green LEDs when driving Talon Forward / Requesting Postiive Output
+		 * Phase sensor to have positive increment when driving Talon Forward (Green LED)
+		 */
+		_talon.setSensorPhase(false);  // When controller goes green encoder shows +motion
+		_talon.setInverted(false);	   // When +1 goes into controller it goes green	
+
+		/* Set relevant frame periods to be at least as fast as periodic rate */
+		_talon.setStatusFramePeriod(StatusFrameEnhanced.Status_13_Base_PIDF0, 10, Constants.kTimeoutMs);
+
+		_talon.configClosedloopRamp(0.0);
 
 		/* Config the peak and nominal outputs */
 		_talon.configNominalOutputForward(0, Constants.kTimeoutMs);
@@ -97,21 +114,26 @@ public class Robot extends TimedRobot {
 	 * This function is called periodically during operator control
 	 */
 	public void teleopPeriodic() {
-		/* Get gamepad axis */
-		double leftYstick = -1 * _joy.getY();
+		double targetRPM = SmartDashboard.getNumber("Target RPM",500.0);
 
+		if (!_joy.getRawButton(1) && !_joy.getRawButton(2))
+		{
+			_talon.set(ControlMode.PercentOutput,0.0);
+			return;
+		}
 		/* Get Talon/Victor's current output percentage */
 		double motorOutput = _talon.getMotorOutputPercent();
 		
 		/* Prepare line to print */
-		_sb.append("\tout:");
-		/* Cast to int to remove decimal places */
-		_sb.append((int) (motorOutput * 100));
-		_sb.append("%");	// Percent
-
+		_sb.append("\tCommandk%:");
+		_sb.append((_joy.getRawButton(2)?-1.0:1.0));
+		_sb.append("\tOut%:");
+		_sb.append(motorOutput);
 		_sb.append("\tspd:");
-		_sb.append(_talon.getSelectedSensorVelocity(Constants.kPIDLoopIdx));
-		_sb.append("u"); 	// Native units
+		int spd = _talon.getSelectedSensorVelocity(Constants.kPIDLoopIdx);
+		SmartDashboard.putNumber("spd",spd);
+		_sb.append(spd);
+
 
         /** 
 		 * When button 1 is held, start and run Velocity Closed loop.
@@ -125,23 +147,25 @@ public class Robot extends TimedRobot {
 			 * 4096 Units/Rev * 500 RPM / 600 100ms/min in either direction:
 			 * velocity setpoint is in units/100ms
 			 */
-			double targetVelocity_UnitsPer100ms = leftYstick * 500.0 * 4096 / 600;
+			double targetVelocity_UnitsPer100ms =  (_joy.getRawButton(2)?-1.0:1.0) * targetRPM * Constants.kTicksPerRev / 600;
 			/* 500 RPM in either direction */
 			_talon.set(ControlMode.Velocity, targetVelocity_UnitsPer100ms);
 
 			/* Append more signals to print when in speed mode. */
 			_sb.append("\terr:");
-			_sb.append(_talon.getClosedLoopError(Constants.kPIDLoopIdx));
+			int err = _talon.getClosedLoopError(Constants.kPIDLoopIdx);
+			SmartDashboard.putNumber("err",err);
+			_sb.append(err);
 			_sb.append("\ttrg:");
 			_sb.append(targetVelocity_UnitsPer100ms);
 		} else {
 			/* Percent Output */
 
-			_talon.set(ControlMode.PercentOutput, leftYstick);
+			_talon.set(ControlMode.PercentOutput, (_joy.getRawButton(2)?-1.0:1.0));
 		}
 
         /* Print built string every 10 loops */
-		if (++_loops >= 10) {
+		if (++_loops >= 5) {
 			_loops = 0;
 			System.out.println(_sb.toString());
         }
