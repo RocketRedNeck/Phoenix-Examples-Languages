@@ -58,6 +58,7 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.Joystick;
 import java.util.concurrent.TimeUnit;		// Delay
 
@@ -68,7 +69,9 @@ import com.ctre.phoenix.motorcontrol.StatusFrameEnhanced;
 
 public class Robot extends TimedRobot {
 	/* Hardware */
-	TalonSRX _talon = new TalonSRX(2);
+	TalonSRX _talon = new TalonSRX(9);
+	TalonSRX _talon1 = new TalonSRX(12);
+
 	Joystick _joy = new Joystick(0);
 
 	/* Used to build string throughout loop */
@@ -77,9 +80,12 @@ public class Robot extends TimedRobot {
 	public void robotInit() {
 		/* Factory default hardware to prevent unexpected behavior */
 		_talon.configFactoryDefault();
+		_talon1.configFactoryDefault();
+
+		_talon1.follow(_talon);
 
 		/* Configure Sensor Source for Pirmary PID */
-		_talon.configSelectedFeedbackSensor(FeedbackDevice.QuadEncoder,
+		_talon.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative,
 											Constants.kPIDLoopIdx, 
 											Constants.kTimeoutMs);
 
@@ -88,9 +94,9 @@ public class Robot extends TimedRobot {
 		 * Invert Motor to have green LEDs when driving Talon Forward / Requesting Postiive Output
 		 * Phase sensor to have positive increment when driving Talon Forward (Green LED)
 		 */
-		// JUNIOR !
 		_talon.setSensorPhase(false);
 		_talon.setInverted(false);
+		_talon1.setInverted(false);
 
 		/* Set relevant frame periods to be at least as fast as periodic rate */
 		_talon.setStatusFramePeriod(StatusFrameEnhanced.Status_13_Base_PIDF0, 10, Constants.kTimeoutMs);
@@ -110,8 +116,8 @@ public class Robot extends TimedRobot {
 		_talon.config_kD(Constants.kSlotIdx, Constants.kGains.kD, Constants.kTimeoutMs);
 
 		/* Set acceleration and vcruise velocity - see documentation */
-		_talon.configMotionCruiseVelocity(15000, Constants.kTimeoutMs);
-		_talon.configMotionAcceleration(6000, Constants.kTimeoutMs);
+		_talon.configMotionCruiseVelocity((int)(0.75*300), Constants.kTimeoutMs);
+		_talon.configMotionAcceleration((int)(0.75*300), Constants.kTimeoutMs);
 
 		/* Zero the sensor */
 		_talon.setSelectedSensorPosition(0, Constants.kPIDLoopIdx, Constants.kTimeoutMs);
@@ -121,15 +127,27 @@ public class Robot extends TimedRobot {
 	 * This function is called periodically during operator control
 	 */
 	public void teleopPeriodic() {
+		int posRel = _talon.getSelectedSensorPosition();
+		int posAbs = _talon.getSensorCollection().getPulseWidthPosition();
+		int vel    = _talon.getSelectedSensorVelocity();
+		double amps = _talon.getOutputCurrent();
+		double amps1 = _talon1.getOutputCurrent();
+
+		SmartDashboard.putNumber("RelPos (ticks)",posRel);
+		SmartDashboard.putNumber("AbsPos (ticks)",posAbs);
+		SmartDashboard.putNumber("Vel    (tp100)",vel);
+		SmartDashboard.putNumber("Current  (Amps)",amps);
+		SmartDashboard.putNumber("Current1 (Amps)", amps1);
+
 
 		if (_joy.getRawButton(3)) {
 			_talon.setSelectedSensorPosition(0);
 		}
 		/* Get gamepad axis - forward stick is positive */
 		double leftYstick = -1.0 * _joy.getY();
-		if ((Math.abs(leftYstick)<0.25) && !_joy.getRawButton(1) && !_joy.getRawButton(2))
+		if ((Math.abs(leftYstick)<0.10) && !_joy.getRawButton(1) && !_joy.getRawButton(2))
 		{
-			_talon.set(ControlMode.PercentOutput,0.0);
+			_talon.set(ControlMode.PercentOutput,0.0);		
 			return;
 		}
 
@@ -151,8 +169,8 @@ public class Robot extends TimedRobot {
 		if (_joy.getRawButton(1) || _joy.getRawButton(2)) {
 			/* Motion Magic */ 
 			
-			/*8192 ticks/rev * 10 Rotations in either direction */
-			double targetPos = /*leftYstick **/ 8192 * 10.0 * (_joy.getRawButton(2)?-1.0:1.0);
+			/*4192 ticks/rev * 1 Rotations in either direction */
+			double targetPos = /*leftYstick **/ 4096 * 1.0 * (_joy.getRawButton(2)?-1.0:1.0);
 			_talon.set(ControlMode.MotionMagic, targetPos);
 
 			/* Append more signals to print when in speed mode */
